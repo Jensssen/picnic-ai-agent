@@ -1,51 +1,10 @@
-# -*- coding: utf-8 -*-
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
-## Setup
-
-To install the dependencies for this script, run:
-
-```
-pip install google-genai opencv-python pyaudio pillow mss
-```
-
-Before running this script, ensure the `GOOGLE_API_KEY` environment
-variable is set to the api-key you obtained from Google AI Studio.
-
 Important: **Use headphones**. This script uses the system default audio
 input and output, which often won't include echo cancellation. So to prevent
 the model from interrupting itself it is important that you use headphones.
-
-## Run
-
-To run the script:
-
-```
-python live_api_starter.py
-```
-
-The script takes a video-mode flag `--mode`, this can be "camera", "screen", or "none".
-The default is "camera". To share your screen run:
-
-```
-python live_api_starter.py --mode screen
-```
 """
 import asyncio
-import sys
+import os
 import traceback
 
 import pyaudio
@@ -54,41 +13,66 @@ from google import genai
 
 load_dotenv()
 
-if sys.version_info < (3, 11, 0):
-    import taskgroup, exceptiongroup
-
-    asyncio.TaskGroup = taskgroup.TaskGroup
-    asyncio.ExceptionGroup = exceptiongroup.ExceptionGroup
-
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 SEND_SAMPLE_RATE = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE = 1024
-
 MODEL = "models/gemini-2.0-flash-exp"
 
-DEFAULT_MODE = "none"
 
-client = genai.Client(http_options={"api_version": "v1alpha"})
+def set_light_values(brightness):
+    """Set the brightness of a room light. (mock API).
 
-CONFIG = {"generation_config": {"response_modalities": ["AUDIO"]}}
+    Args:
+        brightness: Light level from 0 to 100. Zero is off and 100 is full brightness
+
+    Returns:
+        A dictionary containing the set brightness.
+    """
+    print(brightness)
+    return {
+        "brightness": brightness
+    }
+
+tool_set_light_values = {
+    "function_declarations": [
+        {
+            "name": "set_light_values",
+            "description": "Set the brightness of a room light.",
+            "parameters": {
+                "type": "OBJECT",
+                "properties": {
+                    "brightness": {
+                        "type": "NUMBER",
+                        "description": "Light level from 0 to 100. Zero is off and 100 is full brightness"
+                    }
+                },
+                "required": ["brightness"]
+            }
+        }
+    ]
+}
+
+
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"), http_options={"api_version": "v1alpha"})
+
+CONFIG = {"generation_config": {"response_modalities": ["AUDIO"]},
+          "system_instruction": "You are a home assistant bot.",
+          "tools": [tool_set_light_values]}
 
 pya = pyaudio.PyAudio()
 
 
 class AudioLoop:
-    def __init__(self, video_mode=DEFAULT_MODE):
-        self.video_mode = video_mode
-
+    def __init__(self):
         self.audio_in_queue = None
         self.out_queue = None
-
         self.session = None
-
         self.send_text_task = None
         self.receive_audio_task = None
         self.play_audio_task = None
+        self.audio_stream = None
 
     async def send_text(self):
         while True:
@@ -125,7 +109,7 @@ class AudioLoop:
             await self.out_queue.put({"data": data, "mime_type": "audio/pcm"})
 
     async def receive_audio(self):
-        "Background task to reads from the websocket and write pcm chunks to the output queue"
+        """Background task to reads from the websocket and write pcm chunks to the output queue"""
         while True:
             turn = self.session.receive()
             async for response in turn:
