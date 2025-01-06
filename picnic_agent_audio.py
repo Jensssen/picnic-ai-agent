@@ -10,6 +10,10 @@ import traceback
 import pyaudio
 from dotenv import load_dotenv
 from google import genai
+from google.cloud import texttospeech
+
+from picnic_tools import search_for_products, add_product_to_cart, remove_product_from_cart
+from picnic_tools import tools
 
 load_dotenv()
 
@@ -19,49 +23,15 @@ SEND_SAMPLE_RATE = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE = 1024
 MODEL = "models/gemini-2.0-flash-exp"
-
-
-def set_light_values(brightness):
-    """Set the brightness of a room light. (mock API).
-
-    Args:
-        brightness: Light level from 0 to 100. Zero is off and 100 is full brightness
-
-    Returns:
-        A dictionary containing the set brightness.
-    """
-    print(brightness)
-    return {
-        "brightness": brightness
-    }
-
-tool_set_light_values = {
-    "function_declarations": [
-        {
-            "name": "set_light_values",
-            "description": "Set the brightness of a room light.",
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {
-                    "brightness": {
-                        "type": "NUMBER",
-                        "description": "Light level from 0 to 100. Zero is off and 100 is full brightness"
-                    }
-                },
-                "required": ["brightness"]
-            }
-        }
-    ]
-}
-
+pya = pyaudio.PyAudio()
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"), http_options={"api_version": "v1alpha"})
+text_to_speach_client = texttospeech.TextToSpeechClient()
 
-CONFIG = {"generation_config": {"response_modalities": ["AUDIO"]},
-          "system_instruction": "You are a home assistant bot.",
-          "tools": [tool_set_light_values]}
-
-pya = pyaudio.PyAudio()
+CONFIG = {"generation_config": {"response_modalities": ["AUDIO"], "temperature": 0},
+          "system_instruction": "You are a shopping assistant for the online grocery store Picnic. DO NOT HALLUCINATE! "
+                                "ONLY RESPOND WITH FACTS!",
+          "tools": [tools]}
 
 
 class AudioLoop:
@@ -78,7 +48,7 @@ class AudioLoop:
         while True:
             text = await asyncio.to_thread(
                 input,
-                "message > ",
+                "message > \n",
             )
             if text.lower() == "q":
                 break
@@ -111,6 +81,7 @@ class AudioLoop:
     async def receive_audio(self):
         """Background task to reads from the websocket and write pcm chunks to the output queue"""
         while True:
+            function_responses = []
             turn = self.session.receive()
             async for response in turn:
                 if data := response.data:
@@ -118,7 +89,57 @@ class AudioLoop:
                     continue
                 if text := response.text:
                     print(text, end="")
-
+                    continue
+                if tool := response.tool_call:
+                    function_calls = response.tool_call.function_calls
+                    for function_call in function_calls:
+                        name = function_call.name
+                        args = function_call.args
+                        call_id = function_call.id
+                        if name == "search_for_products":
+                            try:
+                                result = search_for_products(str(args["search_query"]))
+                                function_responses.append({
+                                    "name": name,
+                                    "response": result,
+                                    "id": call_id
+                                })
+                            except Exception as e:
+                                print(f"Error executing search_for_products function with error: {e}")
+                        if name == "add_product_to_cart":
+                            try:
+                                product_id = args["product_id"]
+                                try:
+                                    count = args["count"]
+                                except KeyError:
+                                    count = 1
+                                result = add_product_to_cart(str(product_id), int(count))
+                                function_responses.append({
+                                    "name": name,
+                                    "response": {"result": result},
+                                    "id": call_id
+                                })
+                            except Exception as e:
+                                print(f"Error executing add_product_to_cart function with error: {e}")
+                        if name == "remove_product_from_cart":
+                            try:
+                                product_id = args["product_id"]
+                                try:
+                                    count = args["count"]
+                                except KeyError:
+                                    count = 1
+                                result = remove_product_from_cart(str(product_id), int(count))
+                                function_responses.append({
+                                    "name": name,
+                                    "response": {"result": result},
+                                    "id": call_id
+                                })
+                            except Exception as e:
+                                print(f"Error executing remove_product_from_cart function with error: {e}")
+                    # Send function result back to Gemini
+                    print(function_responses)
+                    await self.session.send(function_responses)
+                    continue
             # If you interrupt the model, it sends a turn_complete.
             # For interruptions to work, we need to stop playback.
             # So empty out the audio queue because it may have loaded
@@ -145,10 +166,8 @@ class AudioLoop:
                 asyncio.TaskGroup() as tg,
             ):
                 self.session = session
-
                 self.audio_in_queue = asyncio.Queue()
                 self.out_queue = asyncio.Queue(maxsize=5)
-
                 send_text_task = tg.create_task(self.send_text())
                 tg.create_task(self.send_realtime())
                 tg.create_task(self.listen_audio())
