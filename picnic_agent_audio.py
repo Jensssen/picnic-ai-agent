@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.cloud import texttospeech
 
-from picnic_tools import search_for_products, add_product_to_cart, remove_product_from_cart
+from picnic_tools import search_for_products, add_product_to_cart, remove_product_from_cart, search_for_recipes
 from picnic_tools import tools
 
 load_dotenv()
@@ -136,6 +136,16 @@ class AudioLoop:
                                 })
                             except Exception as e:
                                 print(f"Error executing remove_product_from_cart function with error: {e}")
+                        if name == "search_for_recipes":
+                            try:
+                                result = search_for_recipes(str(args["search_query"]))
+                                function_responses.append({
+                                    "name": name,
+                                    "response": result,
+                                    "id": call_id
+                                })
+                            except Exception as e:
+                                print(f"Error executing search_for_recipes function with error: {e}")
                     # Send function result back to Gemini
                     print(function_responses)
                     await self.session.send(function_responses)

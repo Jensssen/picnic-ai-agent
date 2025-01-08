@@ -114,3 +114,38 @@ def _extract_search_results(raw_results, max_items: int = 10):
     return {"items": search_results}
     
     return {"items": search_results}
+
+
+def _extract_recipe_search_results(raw_results, max_items: int = 10):
+    """Extract recipe search results from the nested dictionary structure returned by Picnic recipe search.
+    Number of max items can be defined to reduce excessive nested search"""
+    search_results = []
+
+    def find_articles(node):
+        if len(search_results) >= max_items:
+            return
+        if "recipe-tile__" in node.get("id", ""):
+            content = node.get("pml", {})
+            component = content.get("component", {})
+            recipe_name = component.get("accessibilityLabel", None)
+
+            search_results.append({"recipe_name": recipe_name})
+
+        for child in node.get("children", []):
+            find_articles(child)
+
+    body = raw_results.get("body", {})
+    child = body.get("child", {})
+    find_articles(child)
+    analytics = child.get("analytics", {})
+    contexts = analytics.get("contexts", [])
+    if len(contexts) > 0:
+        contexts = contexts[-1]
+        data = contexts.get("data", {})
+        recipe_ids = data.get("recipe_ids", [])
+        if len(recipe_ids) >= max_items:
+            for idx, search_result in enumerate(search_results):
+                search_result["id"] = recipe_ids[idx]
+
+    return {"items": search_results}
+

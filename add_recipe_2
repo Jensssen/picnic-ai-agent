@@ -1,0 +1,76 @@
+https://storefront-prod.de.picnicinternational.com/api/15/pages/task/assign-recipe-to-day
+
+{"payload":{"recipe_id":"664375b30daa4456de253728","portions":6,"day_offset":null,"core_ingredients":[{"ingredient_id":"7115c0e8-0879-411e-8b36-a5812a1faee9","selling_unit_id":"s1023297","name":"Brötchen","ingredient_type":"CORE","order":1,"selling_unit_quantity":1,"written_quantity":"8 Stk.","display_ingredient_quantity":8,"display_unit_of_measurement":"Stk.","availability_status":"AVAILABLE"},{"ingredient_id":"c92d5ce0-2670-4dc6-8a6c-e45a6aa443da","selling_unit_id":"s1020276","name":"Mais","ingredient_type":"CORE","order":2,"selling_unit_quantity":1,"written_quantity":"1 Dose","display_ingredient_quantity":1,"display_unit_of_measurement":"Dose","availability_status":"AVAILABLE"},{"ingredient_id":"7e329eff-0b40-4f50-a425-7b7732ca7469","selling_unit_id":"s1029546","name":"Cherrytomaten","ingredient_type":"CORE","order":3,"selling_unit_quantity":1,"written_quantity":"150 g","display_ingredient_quantity":150,"display_unit_of_measurement":"g","availability_status":"AVAILABLE"},{"ingredient_id":"269b5cce-cb5f-4f38-ae05-f2b8deef5bf6","selling_unit_id":"s1032352","name":"Gratinkäse","ingredient_type":"CORE","order":4,"selling_unit_quantity":1,"written_quantity":"150 g","display_ingredient_quantity":150,"display_unit_of_measurement":"g","availability_status":"AVAILABLE"},{"ingredient_id":"9109c76c-f450-4263-91eb-1e57ac4acf93","selling_unit_id":"s1027982","name":"Paprika","ingredient_type":"CORE","order":5,"selling_unit_quantity":1,"written_quantity":"1 Stk.","display_ingredient_quantity":1,"display_unit_of_measurement":"Stk.","availability_status":"AVAILABLE"},{"ingredient_id":"b152eb9a-0b3b-4ab3-9da7-bbf2b68fba3a","selling_unit_id":"s1060088","name":"Braune Champignons","ingredient_type":"CORE","order":6,"selling_unit_quantity":1,"written_quantity":"150 g","display_ingredient_quantity":150,"display_unit_of_measurement":"g","availability_status":"AVAILABLE"},{"ingredient_id":"c3882ac8-aa5d-4422-95fd-f9cdba806071","selling_unit_id":"s1021966","name":"Schlagsahne","ingredient_type":"CORE","order":7,"selling_unit_quantity":1,"written_quantity":"200 ml","display_ingredient_quantity":200,"display_unit_of_measurement":"ml","availability_status":"AVAILABLE"},{"ingredient_id":"12151ef8-b0d5-4266-b33f-93f2259f9b81","selling_unit_id":"s1060062","name":"Basilikum","ingredient_type":"CORE","order":8,"selling_unit_quantity":1,"written_quantity":"1 Bund","display_ingredient_quantity":1,"display_unit_of_measurement":"Bund","availability_status":"AVAILABLE"},{"ingredient_id":"359a6593-10a2-4496-aa6e-4421234479e0","selling_unit_id":"s1029170","name":"Schmand","ingredient_type":"CORE","order":9,"selling_unit_quantity":1,"written_quantity":"200 g","display_ingredient_quantity":200,"display_unit_of_measurement":"g","availability_status":"AVAILABLE"},{"ingredient_id":"b4f66fff-b8f5-4ecd-aea8-6e71feb5b7fe","selling_unit_id":"s1087083","name":"Italienische Kräuter","ingredient_type":"CORE","order":11,"selling_unit_quantity":1,"written_quantity":"1 EL","display_ingredient_quantity":1,"display_unit_of_measurement":"EL","availability_status":"AVAILABLE"}]}}
+{
+	"dayRelativeToSlot": "0",
+	"assignedNumberOfPortions": 6,
+	"cart": {
+		"sellingUnits": {
+			"s1023297": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1020276": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1029546": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1032352": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1027982": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1060088": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1021966": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1060062": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1029170": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			},
+			"s1087083": {
+				"quantity": 1,
+				"availabilityStatus": {
+					"type": "AVAILABLE"
+				}
+			}
+		},
+		"sellingUnitsTotalPrice": 2123,
+		"checkoutTotalPrice": null,
+		"generatedAt": 1.736373294473E12
+	},
+	"anyUnavailableIngredient": false,
+	"unAvailableIngredients": []
+}

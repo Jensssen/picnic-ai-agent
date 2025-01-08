@@ -21,6 +21,10 @@ tools = {
                     "search_query": {
                         "type": "STRING",
                         "description": "The name of the product that shall be searched such as milk or apples"
+                    },
+                    "max_item_return_count": {
+                        "type": "NUMBER",
+                        "description": "Number of returned products. Can be between 0 and 10."
                     }
                 },
                 "required": ["search_query"]
@@ -63,6 +67,24 @@ tools = {
                 },
                 "required": ["product_id"]
             }
+        },
+        {
+            "name": "search_for_recipes",
+            "description": "Searches for recipes on the online grocery platform Picnic.",
+            "parameters": {
+                "type": "OBJECT",
+                "properties": {
+                    "search_query": {
+                        "type": "STRING",
+                        "description": "Name of the recipe that shall be searched such as pizza or spaghetti bolognese."
+                    },
+                    "max_item_return_count": {
+                        "type": "NUMBER",
+                        "description": "Number of returned recipes. Can be between 0 and 10."
+                    }
+                },
+                "required": ["search_query"]
+            }
         }
     ]
 }
@@ -73,16 +95,16 @@ def format_price(value):
     return f"{euros:.2f} Euro"
 
 
-def search_for_products(search_query: str) -> dict:
+def search_for_products(search_query: str, max_item_return_count: int = 3) -> dict:
     """Search for products on the Picnic platform.
 
     Args:
         search_query: Product name that shall be searched.
+        max_item_return_count: Maximum number of returned products.
 
     Returns:
         A list of products that are available on the Picnic platform, sorted by price.
     """
-    max_item_return_count = 3
     products = picnic.search(search_query)[0]["items"]
     filtered_products = []
     if len(products) > 0:
@@ -142,3 +164,23 @@ def remove_product_from_cart(product_id: str, count: int = 1) -> dict:
             item_name = item["items"][0]["name"]
             return {"picnic_response": f"Successfully removed {item_name} from shopping cart"}
     return {"picnic_response": f"Successfully removed product from shopping cart"}
+
+
+def search_for_recipes(search_query: str, max_item_return_count: int = 3) -> dict:
+    """Search for recipes on the Picnic platform.
+
+    Args:
+        search_query: Recipe that shall be searched.
+        max_item_return_count: Maximum number of returned recipes.
+
+    Returns:
+        A list of recipes that are available on the Picnic platform, sortd by relevance.
+    """
+    recipes = picnic.search_recipe(search_query)[0]["items"]
+    if len(recipes) == 0:
+        return {
+            "recipes": "No recipes could be found!"
+        }
+    return {
+        "recipes": recipes[0:max_item_return_count]
+    }

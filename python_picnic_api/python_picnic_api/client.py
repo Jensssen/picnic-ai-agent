@@ -1,6 +1,6 @@
 from hashlib import md5
 
-from .helper import _tree_generator, _url_generator, _get_category_name, _extract_search_results
+from .helper import _tree_generator, _url_generator, _get_category_name, _extract_search_results, _extract_recipe_search_results
 from .session import PicnicAPISession, PicnicAuthError
 
 DEFAULT_URL = "https://storefront-prod.{}.picnicinternational.com/api/{}"
@@ -82,6 +82,11 @@ class PicnicAPI:
         search_results = _extract_search_results(raw_results)
         return [search_results]
 
+    def search_recipe(self, term: str):
+        path = f"/pages/search-page-results?search_term={term}&is_recipe=true&selected_sorting=RELEVANCE"
+        raw_results = self._get(path, add_picnic_headers=True)
+        search_results = _extract_recipe_search_results(raw_results)
+        return [search_results]
         
     def get_lists(self, list_id: str = None):
         if list_id:
