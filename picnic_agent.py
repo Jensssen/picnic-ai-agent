@@ -1,19 +1,18 @@
-"""
-Important: **Use headphones**. This script uses the system default audio
-input and output, which often won't include echo cancellation. So to prevent
-the model from interrupting itself it is important that you use headphones.
-"""
 import asyncio
 import itertools
 import os
 import traceback
+from typing import Generator
+from pprint import pprint
 
 import pyaudio
 from dotenv import load_dotenv
 from google import genai
 from google.cloud import texttospeech
 
-from picnic_tools import search_for_products, add_product_to_cart, remove_product_from_cart, search_for_recipes
+from picnic_tools import (search_for_products, add_product_to_cart, remove_product_from_cart, search_for_recipes,
+                          add_recipe_to_cart, search_for_cheaper_product_alternative, replace_existing_product,
+                          get_all_current_products_in_cart)
 from picnic_tools import tools
 
 load_dotenv()
@@ -30,16 +29,24 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"), http_options={"a
 text_to_speach_client = texttospeech.TextToSpeechClient()
 
 CONFIG = {"generation_config": {"response_modalities": ["TEXT"], "temperature": 0},
-          "system_instruction": "You are a shopping assistant for the online grocery store Picnic. "
-                                "DO NOT HALLUCINATE! ONLY RESPOND WITH FACTS!",
+          "system_instruction": "You are a shopping assistant called Picnic Pal 3000 for the online grocery store "
+                                "Picnic. DO NOT HALLUCINATE!",
           "tools": [tools]}
 streaming_config = texttospeech.StreamingSynthesizeConfig(
     voice=texttospeech.VoiceSelectionParams(name="en-US-Journey-D", language_code="en-US"))
 config_request = texttospeech.StreamingSynthesizeRequest(streaming_config=streaming_config)
 
+TOOLS = {
+    "search_for_products": {"function": search_for_products, "args": ["search_query"]},
+    "search_for_recipes": {"function": search_for_recipes, "args": ["search_query"]},
+    "add_recipe_to_cart": {"function": add_recipe_to_cart, "args": ["recipe_id"]},
+    "search_for_cheaper_product_alternative": {"function": search_for_cheaper_product_alternative,
+                                               "args": ["product_name"]},
+}
+
 
 class AudioLoop:
-    def __init__(self):
+    def __init__(self) -> None:
         self.audio_in_queue = None
         self.out_queue = None
         self.session = None
@@ -48,7 +55,7 @@ class AudioLoop:
         self.play_audio_task = None
         self.audio_stream = None
 
-    async def send_text(self):
+    async def send_text(self) -> None:
         while True:
             text = await asyncio.to_thread(
                 input,
@@ -58,12 +65,12 @@ class AudioLoop:
                 break
             await self.session.send(text or ".", end_of_turn=True)
 
-    async def send_realtime(self):
+    async def send_realtime(self) -> None:
         while True:
             msg = await self.out_queue.get()
             await self.session.send(msg)
 
-    async def listen_audio(self):
+    async def listen_audio(self) -> None:
         mic_info = pya.get_default_input_device_info()
         self.audio_stream = await asyncio.to_thread(
             pya.open,
@@ -82,7 +89,7 @@ class AudioLoop:
             data = await asyncio.to_thread(self.audio_stream.read, CHUNK_SIZE, **kwargs)
             await self.out_queue.put({"data": data, "mime_type": "audio/pcm"})
 
-    async def receive_audio(self):
+    async def receive_audio(self) -> None:
         """Background task to reads from the websocket and write pcm chunks to the output queue"""
         while True:
             function_responses = []
@@ -96,24 +103,14 @@ class AudioLoop:
                     data = await self.stream_text_to_speech(text)
                     self.audio_in_queue.put_nowait(data)
                     continue
-                if tool := response.tool_call:
+                if _ := response.tool_call:
                     function_calls = response.tool_call.function_calls
                     for function_call in function_calls:
                         name = function_call.name
                         args = function_call.args
                         call_id = function_call.id
-                        if name == "search_for_products":
-                            try:
-                                result = search_for_products(str(args["search_query"]))
-                                function_responses.append({
-                                    "name": name,
-                                    "response": result,
-                                    "id": call_id
-                                })
-                            except Exception as e:
-                                print(f"Error executing search_for_products function with error: {e}")
-                        if name == "add_product_to_cart":
-                            try:
+                        try:
+                            if name == "add_product_to_cart":
                                 product_id = args["product_id"]
                                 try:
                                     count = args["count"]
@@ -125,10 +122,14 @@ class AudioLoop:
                                     "response": {"result": result},
                                     "id": call_id
                                 })
-                            except Exception as e:
-                                print(f"Error executing add_product_to_cart function with error: {e}")
-                        if name == "remove_product_from_cart":
-                            try:
+                            if name == "get_all_current_products_in_cart":
+                                result = get_all_current_products_in_cart()
+                                function_responses.append({
+                                    "name": name,
+                                    "response": {"result": result},
+                                    "id": call_id
+                                })
+                            if name == "remove_product_from_cart":
                                 product_id = args["product_id"]
                                 try:
                                     count = args["count"]
@@ -140,24 +141,33 @@ class AudioLoop:
                                     "response": {"result": result},
                                     "id": call_id
                                 })
-                            except Exception as e:
-                                print(f"Error executing remove_product_from_cart function with error: {e}")
-                        if name == "search_for_recipes":
-                            try:
-                                result = search_for_recipes(str(args["search_query"]))
+                            if name == "replace_existing_product":
+                                result = replace_existing_product(str(args["old_product_id"]),
+                                                                  str(args["new_product_id"]))
                                 function_responses.append({
                                     "name": name,
                                     "response": result,
                                     "id": call_id
                                 })
-                            except Exception as e:
-                                print(f"Error executing search_for_recipes function with error: {e}")
-                    print(function_responses)
+                        except Exception as e:
+                            print(f"Error executing {name} function with error: {e}")
+
+                        try:
+                            tool = TOOLS[name]
+                            result = tool["function"](args[tool["args"][0]])
+                            function_responses.append({
+                                "name": name,
+                                "response": result,
+                                "id": call_id
+                            })
+                        except Exception as e:
+                            print(f"Error executing {name} function with error: {e}")
+                    pprint(function_responses, width=180, indent=2, compact=False)
                     # Send function result back to Gemini
                     await self.session.send(function_responses)
                     continue
 
-    async def play_audio(self):
+    async def play_audio(self) -> None:
         stream = await asyncio.to_thread(
             pya.open,
             format=FORMAT,
@@ -169,10 +179,10 @@ class AudioLoop:
             bytestream = await self.audio_in_queue.get()
             await asyncio.to_thread(stream.write, bytestream)
 
-    async def run(self):
+    async def run(self) -> None:
         try:
             async with (
-                client.aio.live.connect(model=MODEL, config=CONFIG) as session,
+                client.aio.live.connect(model=MODEL, config=CONFIG) as session,  # noqa
                 asyncio.TaskGroup() as tg,
             ):
                 self.session = session
@@ -193,9 +203,10 @@ class AudioLoop:
             self.audio_stream.close()
             traceback.print_exception(EG)
 
-    async def stream_text_to_speech(self, text):
-        def request_generator():
-            yield texttospeech.StreamingSynthesizeRequest(input=texttospeech.StreamingSynthesisInput(text=f" {text}"))
+    async def stream_text_to_speech(self, text: str) -> bytes:
+        def request_generator() -> Generator:
+            yield texttospeech.StreamingSynthesizeRequest(
+                input=texttospeech.StreamingSynthesisInput(text=f" {text}"))  # noqa
 
         streaming_responses = text_to_speach_client.streaming_synthesize(
             itertools.chain([config_request], request_generator()))

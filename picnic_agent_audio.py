@@ -12,7 +12,8 @@ from dotenv import load_dotenv
 from google import genai
 from google.cloud import texttospeech
 
-from picnic_tools import search_for_products, add_product_to_cart, remove_product_from_cart, search_for_recipes
+from picnic_tools import (search_for_products, add_product_to_cart, remove_product_from_cart, search_for_recipes,
+                          add_recipe_to_cart, search_for_cheaper_product_alternative, replace_existing_product)
 from picnic_tools import tools
 
 load_dotenv()
@@ -33,9 +34,17 @@ CONFIG = {"generation_config": {"response_modalities": ["AUDIO"], "temperature":
                                 "ONLY RESPOND WITH FACTS!",
           "tools": [tools]}
 
+TOOLS = {
+    "search_for_products": {"function": search_for_products, "args": ["search_query"]},
+    "search_for_recipes": {"function": search_for_recipes, "args": ["search_query"]},
+    "add_recipe_to_cart": {"function": add_recipe_to_cart, "args": ["recipe_id"]},
+    "search_for_cheaper_product_alternative": {"function": search_for_cheaper_product_alternative,
+                                               "args": ["product_name"]},
+}
+
 
 class AudioLoop:
-    def __init__(self):
+    def __init__(self) -> None:
         self.audio_in_queue = None
         self.out_queue = None
         self.session = None
@@ -44,7 +53,7 @@ class AudioLoop:
         self.play_audio_task = None
         self.audio_stream = None
 
-    async def send_text(self):
+    async def send_text(self) -> None:
         while True:
             text = await asyncio.to_thread(
                 input,
@@ -54,12 +63,12 @@ class AudioLoop:
                 break
             await self.session.send(text or ".", end_of_turn=True)
 
-    async def send_realtime(self):
+    async def send_realtime(self) -> None:
         while True:
             msg = await self.out_queue.get()
             await self.session.send(msg)
 
-    async def listen_audio(self):
+    async def listen_audio(self) -> None:
         mic_info = pya.get_default_input_device_info()
         self.audio_stream = await asyncio.to_thread(
             pya.open,
@@ -78,7 +87,7 @@ class AudioLoop:
             data = await asyncio.to_thread(self.audio_stream.read, CHUNK_SIZE, **kwargs)
             await self.out_queue.put({"data": data, "mime_type": "audio/pcm"})
 
-    async def receive_audio(self):
+    async def receive_audio(self) -> None:
         """Background task to reads from the websocket and write pcm chunks to the output queue"""
         while True:
             function_responses = []
@@ -90,22 +99,23 @@ class AudioLoop:
                 if text := response.text:
                     print(text, end="")
                     continue
-                if tool := response.tool_call:
+                if _ := response.tool_call:
                     function_calls = response.tool_call.function_calls
                     for function_call in function_calls:
                         name = function_call.name
                         args = function_call.args
                         call_id = function_call.id
-                        if name == "search_for_products":
-                            try:
-                                result = search_for_products(str(args["search_query"]))
-                                function_responses.append({
-                                    "name": name,
-                                    "response": result,
-                                    "id": call_id
-                                })
-                            except Exception as e:
-                                print(f"Error executing search_for_products function with error: {e}")
+
+                        try:
+                            tool = TOOLS[function_call.name]
+                            result = tool["function"](args[tool["args"]])
+                            function_responses.append({
+                                "name": name,
+                                "response": result,
+                                "id": call_id
+                            })
+                        except Exception as e:
+                            print(f"Error executing {function_call.name} function with error: {e}")
                         if name == "add_product_to_cart":
                             try:
                                 product_id = args["product_id"]
@@ -136,16 +146,17 @@ class AudioLoop:
                                 })
                             except Exception as e:
                                 print(f"Error executing remove_product_from_cart function with error: {e}")
-                        if name == "search_for_recipes":
-                            try:
-                                result = search_for_recipes(str(args["search_query"]))
-                                function_responses.append({
-                                    "name": name,
-                                    "response": result,
-                                    "id": call_id
-                                })
-                            except Exception as e:
-                                print(f"Error executing search_for_recipes function with error: {e}")
+                            if name == "replace_existing_product":
+                                try:
+                                    result = replace_existing_product(str(args["old_product_id"]),
+                                                                      str(args["new_product_id"]))
+                                    function_responses.append({
+                                        "name": name,
+                                        "response": result,
+                                        "id": call_id
+                                    })
+                                except Exception as e:
+                                    print(f"Error executing replace_existing_product function with error: {e}")
                     # Send function result back to Gemini
                     print(function_responses)
                     await self.session.send(function_responses)
@@ -157,7 +168,7 @@ class AudioLoop:
             while not self.audio_in_queue.empty():
                 self.audio_in_queue.get_nowait()
 
-    async def play_audio(self):
+    async def play_audio(self) -> None:
         stream = await asyncio.to_thread(
             pya.open,
             format=FORMAT,
@@ -169,7 +180,7 @@ class AudioLoop:
             bytestream = await self.audio_in_queue.get()
             await asyncio.to_thread(stream.write, bytestream)
 
-    async def run(self):
+    async def run(self) -> None:
         try:
             async with (
                 client.aio.live.connect(model=MODEL, config=CONFIG) as session,
