@@ -1,7 +1,13 @@
-[!NOTE]
-The Picnic API was originally developed by (Mike Brink)[https://github.com/MikeBrink]. You can find his Repo (HERE)[https://github.com/MikeBrink/python-picnic-api].
+"""""""""""""""""
+Disclaimer
+"""""""""""""""""
+
+The Picnic API was originally developed by Mike-Brink_. You can find his Repo here_.
 Unfortunately, he is not responding to any issues or pull requests. Therefore, I have decided to fork his project and continue the development.
-Some endpoints were not working anymore, so I had to fix them. I have also added some new features.
+Some endpoints were not working anymore, so I had to fix them. I have also added some new ones.
+
+.. _Mike-Brink: https://github.com/MikeBrink
+.. _here: https://github.com/MikeBrink/python-picnic-api
 
 
 """""""""""""""""
@@ -66,18 +72,4 @@ All of these methods will return the shopping cart.
 
     # clearing the cart
     picnic.clear_cart()
-
-See upcoming deliveries
-------------------------
-.. code-block:: python
-
-    >>> picnic.get_current_deliveries()
-    []
-
-
-See available delivery slots
-----------------------------
-.. code-block:: python
-
-    >>> picnic.get_delivery_slots()
 
