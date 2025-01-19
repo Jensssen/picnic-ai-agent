@@ -1,5 +1,4 @@
 import os
-from typing import Dict
 
 from dotenv import load_dotenv
 
@@ -11,136 +10,6 @@ load_dotenv()
 picnic = PicnicAPI(username=os.environ.get("PICNIC_USERNAME"),
                    password=os.environ.get("PICNIC_PASSWORD"),
                    country_code=os.environ.get("PICNIC_REGION"))
-
-tools = {
-    "function_declarations": [
-        {
-            "name": "search_for_products",
-            "description": "Searches for products on the online grocery platform Picnic.",
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {
-                    "search_query": {
-                        "type": "STRING",
-                        "description": "The name of the product that shall be searched such as milk or apples"
-                    },
-                    "max_item_return_count": {
-                        "type": "NUMBER",
-                        "description": "Number of returned products. Can be between 0 and 10."
-                    }
-                },
-                "required": ["search_query"]
-            }
-        },
-        {
-            "name": "add_product_to_cart",
-            "description": "Adds a product to the Picnic platform shopping cart.",
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {
-                    "product_id": {
-                        "type": "STRING",
-                        "description": "The ID of the product that shall be added to the online picnic shopping cart."
-                    },
-                    "count": {
-                        "type": "NUMBER",
-                        "description": "The amount of products to add to the online picnic shopping cart. Default to 1."
-                    }
-                },
-                "required": ["product_id"]
-            }
-        },
-        {
-            "name": "remove_product_from_cart",
-            "description": "Removes a product from the Picnic platform shopping cart.",
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {
-                    "product_id": {
-                        "type": "STRING",
-                        "description": "The ID of the product that shall be removed from the online picnic shopping "
-                                       "cart."
-                    },
-                    "count": {
-                        "type": "NUMBER",
-                        "description": "The amount of products to remove from the online picnic shopping cart. Default "
-                                       "to 1."
-                    }
-                },
-                "required": ["product_id"]
-            }
-        },
-        {
-            "name": "search_for_recipes",
-            "description": "Searches for recipes on the online grocery platform Picnic.",
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {
-                    "search_query": {
-                        "type": "STRING",
-                        "description": "Name of the recipe that shall be searched such as pizza or spaghetti bolognese."
-                    },
-                    "max_item_return_count": {
-                        "type": "NUMBER",
-                        "description": "Number of returned recipes. Can be between 0 and 10."
-                    }
-                },
-                "required": ["search_query"]
-            }
-        },
-        {
-            "name": "add_recipe_to_cart",
-            "description": "Adds a recipe to the Picnic platform shopping cart.",
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {
-                    "recipe_id": {
-                        "type": "STRING",
-                        "description": "The ID of the recipe that shall be added to the online picnic shopping cart."
-                    }
-                },
-                "required": ["recipe_id"]
-            }
-        },
-        {
-            "name": "search_for_cheaper_product_alternative",
-            "description": "Returns a list of product alternatives, sorted by its price, starting with the cheapest.",
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {
-                    "product_name": {
-                        "type": "STRING",
-                        "description": "The name of the product that we want to search cheaper alternatives for."
-                    }
-                },
-                "required": ["product_name"]
-            }
-        },
-        {
-            "name": "replace_existing_product",
-            "description": "Replace an existing product in the users shopping cart with a new one.",
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {
-                    "old_product_id": {
-                        "type": "STRING",
-                        "description": "Product id of the old product that shall be replaced."
-                    },
-                    "new_product_id": {
-                        "type": "STRING",
-                        "description": "Product id of the new product."
-                    }
-                },
-                "required": ["old_product_id", "new_product_id"]
-            }
-        },
-        {
-            "name": "get_all_current_products_in_cart",
-            "description": "Get a list of all products that are currently in the shopping cart.",
-            "required": []
-        },
-    ]
-}
 
 
 def format_price(value: int) -> str:
@@ -239,7 +108,7 @@ def search_for_recipes(search_query: str, max_item_return_count: int = 3) -> dic
     }
 
 
-def add_recipe_to_cart(recipe_id: str) -> Dict[str, str]:
+def add_recipe_to_cart(recipe_id: str) -> dict:
     """Adds a recipe to your online shopping cart.
 
     Args:
@@ -302,3 +171,63 @@ def get_all_current_products_in_cart() -> dict:
         {"price": item["display_price"], "product_name": item["items"][0]["name"], "product_id": item["items"][0]["id"]}
         for item in cart_items]
     return {"picnic_response": filtered_cart_items}
+
+
+def handle_picnic_tool_operations(name: str, args: dict, call_id: str) -> dict:
+    """Function that handles the different operations that can be performed by the Picnic assistant."""
+    def handle_product_search() -> dict:
+        search_query = args["search_query"]
+        return search_for_products(search_query)
+
+    def handle_recipe_search() -> dict:
+        search_query = args["search_query"]
+        return search_for_recipes(search_query)
+
+    def handle_add_recipe() -> dict:
+        recipe_id = args["recipe_id"]
+        return add_recipe_to_cart(str(recipe_id))
+
+    def handle_alternative_product_search() -> dict:
+        product_name = args["product_name"]
+        return search_for_cheaper_product_alternative(product_name)
+
+    def handle_add_product() -> dict:
+        product_id = args["product_id"]
+        count = args.get("count", 1)
+        return add_product_to_cart(str(product_id), int(count))
+
+    def handle_get_products() -> dict:
+        return get_all_current_products_in_cart()
+
+    def handle_remove_product() -> dict:
+        product_id = args["product_id"]
+        count = args.get("count", 1)
+        return remove_product_from_cart(str(product_id), int(count))
+
+    def handle_replace_product() -> dict:
+        return replace_existing_product(
+            str(args["old_product_id"]),
+            str(args["new_product_id"])
+        )
+
+    operations = {
+        "search_for_products": handle_product_search,
+        "search_for_recipes": handle_recipe_search,
+        "add_recipe_to_cart": handle_add_recipe,
+        "search_for_cheaper_product_alternative": handle_alternative_product_search,
+        "add_product_to_cart": handle_add_product,
+        "get_all_current_products_in_cart": handle_get_products,
+        "remove_product_from_cart": handle_remove_product,
+        "replace_existing_product": handle_replace_product
+    }
+
+    if name in operations:
+        result = operations[name]()
+        response = {
+            "name": name,
+            "response": {"result": result},
+            "id": call_id
+        }
+        return response
+
+    raise ValueError(f"Unknown operation: {name}")
