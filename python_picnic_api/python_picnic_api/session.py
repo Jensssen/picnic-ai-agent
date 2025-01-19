@@ -1,3 +1,5 @@
+from typing import Any
+
 from requests import Response, Session
 
 
@@ -8,7 +10,7 @@ class PicnicAuthError(Exception):
 class PicnicAPISession(Session):
     AUTH_HEADER = "x-picnic-auth"
 
-    def __init__(self, auth_token: str = None):
+    def __init__(self, auth_token: str | None = None):
         super().__init__()
         self._auth_token = auth_token
 
@@ -21,29 +23,29 @@ class PicnicAPISession(Session):
         )
 
     @property
-    def authenticated(self):
+    def authenticated(self) -> bool:
         """Returns whether the user is authenticated by checking if the authentication token is set."""
         return bool(self._auth_token)
 
     @property
-    def auth_token(self):
+    def auth_token(self) -> str | None:
         """Returns the auth token."""
         return self._auth_token
 
-    def _update_auth_token(self, auth_token):
+    def _update_auth_token(self, auth_token: str) -> None:
         """Update the auth token if not None and changed."""
         if auth_token and auth_token != self._auth_token:
             self._auth_token = auth_token
             self.headers.update({self.AUTH_HEADER: self._auth_token})
 
-    def get(self, url, **kwargs) -> Response:
+    def get(self, url: str, **kwargs: Any) -> Response:
         """Do a GET request and update the auth token if set."""
         response = super(PicnicAPISession, self).get(url, **kwargs)
         self._update_auth_token(response.headers.get(self.AUTH_HEADER))
 
         return response
 
-    def post(self, url, data=None, json=None, **kwargs) -> Response:
+    def post(self, url: str, data: dict | None = None, json: dict | None = None, **kwargs: Any) -> Response:
         """Do a POST request and update the auth token if set."""
         response = super(PicnicAPISession, self).post(url, data, json, **kwargs)
         self._update_auth_token(response.headers.get(self.AUTH_HEADER))
