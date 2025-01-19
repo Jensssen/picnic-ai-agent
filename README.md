@@ -35,6 +35,9 @@ The AI agent has access to the following tools:
 - get_all_current_products_in_cart: Get all products currently present in your shopping cart.
 
 ### Disclaimer
-This project was a fun, private project of min and is not associated in any way with Picnic or any other company/person. 
+This project was a fun, private project of mine and is not associated in any way with Picnic or any other company/person. 
 Idea and implementation are my own and are not intended to be used in any commercial context. The API could have been a completely different one. 
 I have chosen the Picnic API, simply because I am a big fan of their service.
+
+### Video Demo
+[YOUTUBE](https://www.youtube.com/watch?v=RKc2C-rKmgA)
