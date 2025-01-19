@@ -1,37 +1,33 @@
-from python_picnic_api.session import PicnicAPISession, PicnicAuthError
-from python_picnic_api.helper import _url_generator
-from requests import Session
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
+from requests import Session
+
+from python_picnic_api.python_picnic_api import PicnicAPI
+from python_picnic_api.python_picnic_api.session import PicnicAPISession, PicnicAuthError
 
 load_dotenv()
 
-username = os.getenv("USERNAME")
-password = os.getenv("PASSWORD")
-country_code = os.getenv("COUNTRY_CODE")
+username = os.getenv("PICNIC_USERNAME")
+password = os.getenv("PICNIC_PASSWORD")
+country_code = "DE"
 
 DEFAULT_URL = "https://storefront-prod.{}.picnicinternational.com/api/{}"
 DEFAULT_API_VERSION = "15"
 
 
-def test_init():
+def test_init() -> None:
     assert issubclass(PicnicAPISession, Session)
 
 
-def test_login():
-    base_url = _url_generator(DEFAULT_URL, country_code, DEFAULT_API_VERSION)
-
-    session = PicnicAPISession()
-    session.login(username, password, base_url)
-    assert "x-picnic-auth" in session.headers.keys()
+def test_login() -> None:
+    picnic = PicnicAPI(username, password, country_code=country_code)
+    assert "x-picnic-auth" in picnic.session.headers.keys()
 
 
-def test_login_auth_error():
-    base_url = _url_generator(DEFAULT_URL, country_code, DEFAULT_API_VERSION)
-
+def test_login_auth_error() -> None:
     try:
-        session = PicnicAPISession()
-        session.login('username', 'password', base_url)
+        _ = PicnicAPI("username", "password", country_code=country_code)
     except PicnicAuthError:
         assert True
     else:

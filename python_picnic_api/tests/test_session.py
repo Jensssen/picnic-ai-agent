@@ -1,18 +1,18 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from requests import Session
 
-from python_picnic_api.session import PicnicAPISession
+from python_picnic_api.python_picnic_api.session import PicnicAPISession
 
 
 class TestSession(unittest.TestCase):
     class MockResponse:
-        def __init__(self, headers):
+        def __init__(self, headers: dict) -> None:
             self.headers = headers
 
     @patch.object(Session, "post")
-    def test_update_auth_token(self, post_mock):
+    def test_update_auth_token(self, post_mock: MagicMock) -> None:
         """Test that the initial auth-token is saved."""
         post_mock.return_value = self.MockResponse({
             "x-picnic-auth": "3p9fqahw3uehfaw9fh8aw3ufaw389fpawhuo3fa"
@@ -30,7 +30,7 @@ class TestSession(unittest.TestCase):
         })
 
     @patch.object(Session, "post")
-    def test_update_auth_token_refresh(self, post_mock):
+    def test_update_auth_token_refresh(self, post_mock: MagicMock) -> None:
         """Test that the auth-token is updated if a new one is given in the response headers."""
         post_mock.return_value = self.MockResponse({
             "x-picnic-auth": "renewed-auth-token"
@@ -51,7 +51,7 @@ class TestSession(unittest.TestCase):
             "x-picnic-auth": "renewed-auth-token"
         })
 
-    def test_authenticated_with_auth_token(self):
+    def test_authenticated_with_auth_token(self) -> None:
         picnic_session = PicnicAPISession(auth_token=None)
         self.assertFalse(picnic_session.authenticated)
         self.assertIsNone(picnic_session.headers[picnic_session.AUTH_HEADER])

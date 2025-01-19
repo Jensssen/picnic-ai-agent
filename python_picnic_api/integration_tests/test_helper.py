@@ -1,7 +1,8 @@
-from python_picnic_api.helper import get_image, get_recipe_image
 import requests
+from python_picnic_api.python_picnic_api.helper import get_image, get_recipe_image
 
-def test_get_image():
+
+def test_get_image() -> None:
     id = "8560e1f1c2d2811dfefbbb2342ef0d95250533f2131416aca459bde35d73e901"
     size = "tile-medium"
     suffix = "webp"
@@ -17,7 +18,7 @@ def test_get_image():
     assert content_type.startswith("image/"), "URL does not return an image"
 
 
-def test_get_recipe_image():
+def test_get_recipe_image() -> None:
     id = "5c4cc7cb7a0429695da708394eb0cae1bd9b92935ac76c8fda63bbc57ad5b826"
     size = "medium"
     url = get_recipe_image(id, size=size)
