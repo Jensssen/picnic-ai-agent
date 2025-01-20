@@ -2,8 +2,8 @@
 Disclaimer
 """""""""""""""""
 
-The Picnic API was originally developed by Mike-Brink_. You can find his Repo here_.
-Unfortunately, he is not responding to any issues or pull requests. Therefore, I have decided to fork his project and continue the development.
+This unofficial Picnic API was originally developed by Mike-Brink_. You can find his Repo here_.
+Unfortunately, he is not responding to any issues or pull requests. Therefore, I have decided to fork his project and continue the development on my own.
 Some endpoints were not working anymore, so I had to fix them. I have also added some new ones.
 
 .. _Mike-Brink: https://github.com/MikeBrink
